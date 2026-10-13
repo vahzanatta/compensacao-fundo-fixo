@@ -1,0 +1,16 @@
+# gerados pelo aplicativo
+logs/
+dados_janela/
+revisao_compensacao.html
+analise.json
+config.ini
+
+# dados reais do SAP nunca vão para o repositório
+*.txt
+*.csv
+!exemplos/fbl3h_ficticio.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/

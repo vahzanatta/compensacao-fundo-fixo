@@ -1,0 +1,6 @@
+*.py   text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+*.bat  text eol=crlf
+# o .vbs está em Windows-1252 por causa dos acentos na mensagem de erro
+*.vbs  -text

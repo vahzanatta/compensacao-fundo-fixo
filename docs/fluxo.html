@@ -1,0 +1,217 @@
+<title>Fluxo da Compensação SAMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: coluna única; o diagrama em raias é a peça principal, com as travas e os arquivos logo abaixo. */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --lane:#eaefed; --ink:#17201d; --muted:#56645f; --line:#c9d3cf;
+  --accent:#0f5c55; --accent-bg:#dcebe8; --crit:#a3261b; --crit-bg:#f9e1dd; --ok:#1d7442; --ok-bg:#e1f1e6;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#171f1c; --lane:#141c19; --ink:#e4ece9; --muted:#9aa9a3; --line:#33403b;
+  --accent:#5cc2b6; --accent-bg:#1b3430; --crit:#f28b80; --crit-bg:#381a17; --ok:#72d59d; --ok-bg:#16301f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#171f1c; --lane:#141c19; --ink:#e4ece9; --muted:#9aa9a3; --line:#33403b;
+  --accent:#5cc2b6; --accent-bg:#1b3430; --crit:#f28b80; --crit-bg:#381a17; --ok:#72d59d; --ok-bg:#16301f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px 48px}
+h1{font-family:var(--f-display);font-weight:600;font-size:1.9rem;line-height:1.15;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.2rem;margin:0 0 10px;text-wrap:balance}
+.lede{color:var(--muted);max-width:68ch;margin:8px 0 0}
+figure{margin:24px 0 0}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+svg{display:block;width:100%;min-width:720px;height:auto;color:var(--ink)}
+figcaption{color:var(--muted);font-size:.88rem;margin-top:10px;max-width:72ch}
+.lane{fill:var(--lane)} .lane.alt{fill:var(--accent-bg);opacity:.55}
+.lh{font:600 12px var(--f-body);letter-spacing:.08em;fill:var(--muted)}
+.b{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.b.sap{stroke:var(--accent);stroke-width:1.6}
+.b.d{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.4}
+.b.stop{fill:var(--crit-bg);stroke:var(--crit)}
+.b.end{fill:var(--ok-bg);stroke:var(--ok)}
+.b.auto{fill:var(--accent-bg);stroke:var(--accent);stroke-width:1.4}
+.b.edit{stroke:var(--accent);stroke-dasharray:5 4}
+.t1{font:600 13px var(--f-body);fill:var(--ink)}
+.t2{font:400 11.5px var(--f-body);fill:var(--muted)}
+.a{fill:none;stroke:currentColor;stroke-width:1.4}
+.a.c{stroke:var(--crit)} .mc{fill:var(--crit)}
+.a.loop{stroke-dasharray:4 4;opacity:.7}
+.al{font:500 11.5px var(--f-body);fill:var(--muted)}
+.al.c{fill:var(--crit);font-weight:600}
+.prop{margin-top:28px;display:flex;flex-direction:column;gap:12px}
+.prop h3{font-family:var(--f-display);font-weight:600;font-size:1rem;margin:0 0 6px}
+.cmp{display:grid;grid-template-columns:1fr;gap:12px}
+.cmp>div{background:var(--lane);border-radius:8px;padding:12px 14px}
+.cmp ol{margin:0;padding-left:20px}
+.nota{margin:8px 0 0;font-size:.92rem;color:var(--muted)}
+@media (min-width:760px){.cmp{grid-template-columns:1fr 1fr}}
+.cols{display:grid;grid-template-columns:1fr;gap:16px;margin-top:28px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px}
+.card li{max-width:62ch}
+.files{list-style:none;padding:0!important}
+.files li{display:grid;grid-template-columns:1fr;gap:2px}
+code{font-family:var(--f-mono);font-size:.9em;background:var(--lane);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.files span{color:var(--muted);font-size:.92rem}
+.top{display:flex;gap:12px;align-items:flex-start}
+.top h1{flex:1;min-width:0}
+.tema{flex:none;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit}
+.tema:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (min-width:760px){.cols{grid-template-columns:1fr 1fr}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Fluxo da compensação do fundo fixo SAMS</h1>
+    <button class="tema" id="tema" type="button" aria-label="Alternar tema claro ou escuro">◐</button>
+  </div>
+  <p class="lede">Proposta com dry run automático: ao abrir, o aplicativo já monta o lote de compensação com todas as lojas prontas e roda a F.13 em teste. A analista só confirma ou, nas semanas em que precisa selecionar, edita o lote e o teste é refeito.</p>
+
+  <figure>
+    <div class="scroll"><svg viewBox="0 0 960 863" role="img" aria-label="Fluxo da compensação do fundo fixo em três raias: o aplicativo extrai a FBL3H, monta o lote de compensação padrão com as lojas prontas e roda o dry run da F.13 sozinho; a analista vê o resultado e confirma ou edita o lote, o que refaz o dry run; ao confirmar, o aplicativo revalida, compensa, registra o documento de compensação e confere na FBL3H.">
+<defs>
+<marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+<marker id="seta-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mc" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs>
+<rect class="lane" x="15" y="8" width="300" height="847" rx="10"/>
+<text class="lh" x="165" y="38" text-anchor="middle">ANALISTA</text>
+<rect class="lane alt" x="330" y="8" width="300" height="847" rx="10"/>
+<text class="lh" x="480" y="38" text-anchor="middle">APLICATIVO (PYTHON)</text>
+<rect class="lane" x="645" y="8" width="300" height="847" rx="10"/>
+<text class="lh" x="795" y="38" text-anchor="middle">SAP</text>
+<path class="a " d="M272.0,108 H369.0" marker-end="url(#seta)"/>
+<text class="al " x="322.5" y="100" text-anchor="middle">inicia</text>
+<path class="a " d="M587.0,108 H684.0" marker-end="url(#seta)"/>
+<text class="al " x="637.5" y="100" text-anchor="middle">roda o VBS</text>
+<path class="a " d="M795,135.0 V196 H591.0" marker-end="url(#seta)"/>
+<text class="al " x="657.5" y="188" text-anchor="middle">fundo_fixo.txt</text>
+<path class="a " d="M480,223.0 V253.0" marker-end="url(#seta)"/>
+<text class="al " x="490" y="243.0" text-anchor="start">automático</text>
+<path class="a " d="M480,311.0 V341.0" marker-end="url(#seta)"/>
+<path class="a " d="M587.0,372 H684.0" marker-end="url(#seta)"/>
+<text class="al " x="637.5" y="364" text-anchor="middle">executa</text>
+<path class="a " d="M480,399.0 V460 H276.0" marker-end="url(#seta)"/>
+<text class="al " x="322.5" y="452" text-anchor="middle">resultado</text>
+<path class="a " d="M165,487.0 V506" marker-end="url(#seta)"/>
+<path class="a " d="M165,586 V605.0" marker-end="url(#seta)"/>
+<text class="al " x="175" y="606" text-anchor="start">editar</text>
+<path class="a loop" d="M58.0,636 H36.0 V372 H369.0" marker-end="url(#seta)"/>
+<text class="al loop" x="44.0" y="364" text-anchor="start">refaz o dry run</text>
+<path class="a " d="M299,548 H369.0" marker-end="url(#seta)"/>
+<text class="al " x="336.0" y="540" text-anchor="middle">confirma</text>
+<path class="a " d="M587.0,548 H684.0" marker-end="url(#seta)"/>
+<text class="al " x="637.5" y="540" text-anchor="middle">executa</text>
+<path class="a " d="M795,575.0 V636 H591.0" marker-end="url(#seta)"/>
+<text class="al " x="657.5" y="628" text-anchor="middle">doc. compensação</text>
+<path class="a " d="M480,663.0 V693.0" marker-end="url(#seta)"/>
+<path class="a " d="M587.0,724 H684.0" marker-end="url(#seta)"/>
+<text class="al " x="637.5" y="716" text-anchor="middle">extrai</text>
+<path class="a " d="M480,751.0 V812 H276.0" marker-end="url(#seta)"/>
+<text class="al " x="322.5" y="804" text-anchor="middle">resultado</text>
+<rect class="b n" x="58" y="81" width="214" height="54" rx="8"/>
+<text class="t1" x="165" y="113" text-anchor="middle">Abre o Fundo Fixo</text>
+<rect class="b n" x="373" y="81" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="104" text-anchor="middle">Extrai a FBL3H</text>
+<text class="t2" x="480" y="122" text-anchor="middle">relatorio_fbl3h.vbs</text>
+<rect class="b sap" x="688" y="81" width="214" height="54" rx="8"/>
+<text class="t1" x="795" y="104" text-anchor="middle">FBL3H</text>
+<text class="t2" x="795" y="122" text-anchor="middle">BR21 · conta 28200202</text>
+<rect class="b n" x="373" y="169" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="192" text-anchor="middle">Analisa e classifica</text>
+<text class="t2" x="480" y="210" text-anchor="middle">pares por Nº doc · pronta/revisar/erro</text>
+<rect class="b auto" x="373" y="257" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="280" text-anchor="middle">Monta o lote padrão</text>
+<text class="t2" x="480" y="298" text-anchor="middle">todas as lojas prontas</text>
+<rect class="b auto" x="373" y="345" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="368" text-anchor="middle">Dry run automático</text>
+<text class="t2" x="480" y="386" text-anchor="middle">F.13 em teste, loja por loja</text>
+<rect class="b sap" x="688" y="345" width="214" height="54" rx="8"/>
+<text class="t1" x="795" y="368" text-anchor="middle">F.13 · teste</text>
+<text class="t2" x="795" y="386" text-anchor="middle">nada é lançado</text>
+<rect class="b n" x="58" y="433" width="214" height="54" rx="8"/>
+<text class="t1" x="165" y="456" text-anchor="middle">Vê o lote + dry run</text>
+<text class="t2" x="165" y="474" text-anchor="middle">ok/erro por loja · exceções à parte</text>
+<polygon class="b d" points="165,510 299,548 165,586 31,548"/>
+<text class="t1" x="165" y="545" text-anchor="middle">Compensar como está?</text>
+<text class="t2" x="165" y="561" text-anchor="middle">a maioria das semanas: sim</text>
+<rect class="b edit" x="58" y="609" width="214" height="54" rx="8"/>
+<text class="t1" x="165" y="632" text-anchor="middle">Edita o lote</text>
+<text class="t2" x="165" y="650" text-anchor="middle">tira lojas/pares · inclui revisadas</text>
+<rect class="b n" x="373" y="521" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="544" text-anchor="middle">Revalida e compensa</text>
+<text class="t2" x="480" y="562" text-anchor="middle">FBL3H de novo · confirmação</text>
+<rect class="b sap" x="688" y="521" width="214" height="54" rx="8"/>
+<text class="t1" x="795" y="544" text-anchor="middle">F.13 · efetiva</text>
+<text class="t2" x="795" y="562" text-anchor="middle">aviso FG013</text>
+<rect class="b n" x="373" y="609" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="632" text-anchor="middle">Registra o resultado</text>
+<text class="t2" x="480" y="650" text-anchor="middle">historico_compensacoes.csv</text>
+<rect class="b n" x="373" y="697" width="214" height="54" rx="8"/>
+<text class="t1" x="480" y="720" text-anchor="middle">Confere na FBL3H</text>
+<text class="t2" x="480" y="738" text-anchor="middle">os docs saíram do aberto?</text>
+<rect class="b sap" x="688" y="697" width="214" height="54" rx="8"/>
+<text class="t1" x="795" y="720" text-anchor="middle">FBL3H</text>
+<text class="t2" x="795" y="738" text-anchor="middle">partidas em aberto</text>
+<rect class="b end" x="58" y="785" width="214" height="54" rx="8"/>
+<text class="t1" x="165" y="808" text-anchor="middle">Vê o resultado</text>
+<text class="t2" x="165" y="826" text-anchor="middle">por loja · Histórico</text>
+</svg></div>
+    <figcaption>Em destaque, os dois passos que passam a ser automáticos: o lote padrão e o dry run. O caminho de editar (tracejado) é o desvio das semanas em que é preciso selecionar; ele volta ao dry run, então nada vai para a F.13 efetiva sem um teste do lote final.</figcaption>
+  </figure>
+
+  <section class="card prop" aria-labelledby="h-prop">
+    <h2 id="h-prop">O que muda em relação a hoje</h2>
+    <div class="cmp">
+      <div><h3>Hoje</h3><ol><li>Abrir o aplicativo</li><li>Revisar e marcar</li><li>Montar lote</li><li>Testar na F.13</li><li>Compensar e confirmar</li></ol></div>
+      <div><h3>Proposta</h3><ol><li>Abrir o aplicativo (lote e dry run saem sozinhos)</li><li>Compensar e confirmar</li></ol><p class="nota">Só nas semanas de seleção: <b>Editar lote</b> antes de confirmar.</p></div>
+    </div>
+    <h3>Editar o lote</h3>
+    <ul>
+      <li>Tirar uma loja inteira ou pares específicos do lote padrão.</li>
+      <li>Incluir pares de lojas em "revisar" depois de conferir; documentos sem par continuam bloqueados.</li>
+      <li>Ao salvar, o dry run roda de novo só para as lojas que mudaram; as outras mantêm o resultado.</li>
+      <li>O lote editado fica salvo em <code>a_compensar.csv</code> e a página mostra o que difere do padrão.</li>
+    </ul>
+  </section>
+
+  <div class="cols">
+    <section class="card" aria-labelledby="h-travas">
+      <h2 id="h-travas">Travas de segurança</h2>
+      <ul>
+        <li>Só entram documentos BC com 1 débito e 1 crédito do mesmo valor e da mesma data DOC, dentro da mesma atribuição (loja). Lançamento de outra loja nunca é contrapartida.</li>
+        <li>A partida inicial (SE/AB) e tudo antes do mês corrente ficam fora.</li>
+        <li>O lote padrão só leva lojas prontas; editado, continua exigindo saldo 0,00.</li>
+        <li>Nada é compensado sem dry run do lote final; antes da efetiva, a FBL3H é extraída de novo e cada documento é conferido outra vez.</li>
+        <li>Na F.13, o aplicativo relê a seleção múltipla e só executa se for exatamente o lote da loja.</li>
+        <li>Compensar pede confirmação na tela; a janela não fecha com a F.13 rodando.</li>
+      </ul>
+    </section>
+    <section class="card" aria-labelledby="h-arq">
+      <h2 id="h-arq">Arquivos na pasta temp</h2>
+      <ul class="files">
+        <li><code>fundo_fixo.txt</code><span>Extração da FBL3H, refeita a cada atualização.</span></li>
+        <li><code>a_compensar.csv</code><span>Lote de compensação, padrão ou editado: loja, documento, data DOC e valor.</span></li>
+        <li><code>historico_compensacoes.csv</code><span>Uma linha por compensação efetiva, com o documento de compensação.</span></li>
+        <li><code>logs\app.log</code><span>Na pasta do aplicativo: tudo o que aconteceu, para investigar erros.</span></li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  const r = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  let t = null; try { t = localStorage.getItem("fluxo:tema"); } catch(e){}
+  if(t) r.dataset.theme = t;
+  document.getElementById("tema").addEventListener("click", () => {
+    const atual = r.dataset.theme || (mq.matches ? "dark" : "light");
+    const novo = atual === "dark" ? "light" : "dark";
+    r.dataset.theme = novo;
+    try { localStorage.setItem("fluxo:tema", novo); } catch(e){}
+  });
+})();
+</script>

@@ -5,7 +5,9 @@ Você está assumindo um projeto em andamento. Leia este arquivo inteiro antes d
 ## Quem sou e como prefiro trabalhar
 - Sou a Vah, analista de contas. Conheço bem o SAP, mas não sou programadora e não trabalho com UI/UX.
 - Responda em português, de forma conversacional e direta. Prefiro precisão a respostas tranquilizadoras: se algo não foi testado, diga.
-- Este computador é Windows, da empresa. O Python é chamado com `py`, não `python`. Os pacotes `pywin32` e `pywebview` já estão instalados.
+- Há dois computadores Windows. O Python é chamado com `py`, não `python`, nos dois:
+  - **este (pessoal)**, onde o código é desenvolvido: não tem SAP nem acesso à rede da empresa, então a pasta `\\brsvp0000009\...` não existe aqui. Teste só com o exemplo fictício e os testes.
+  - **o da empresa**, onde o app roda de verdade: tem SAP, a pasta de rede, `pywin32` e `pywebview`. Tudo que depende de SAP ou da rede só é validado lá, pela Vah.
 - Antes de mexer em algo que lança no SAP, me explique o que vai mudar. Teste primeiro com o exemplo fictício e o modo de teste da F.13.
 
 ## Intent Layer

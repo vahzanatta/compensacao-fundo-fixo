@@ -52,6 +52,83 @@ class Esperado(unittest.TestCase):
         self.assertIn("3 de 2", fundo_fixo.aviso_doc_comp(["1", "2", "3"], 2))
 
 
+class _ListaFalsa:
+    """Lista de saída da F.13 (SAPF124) com rolagem: só `por_pagina` linhas visíveis por vez."""
+
+    def __init__(self, linhas, por_pagina, com_barra=True):
+        self.linhas, self.por_pagina, self.pos, self.com_barra = linhas, por_pagina, 0, com_barra
+
+    @property
+    def maximo(self):
+        return max(0, len(self.linhas) - self.por_pagina)
+
+
+class _Barra:
+    def __init__(self, lista):
+        self._l = lista
+
+    maximum = property(lambda self: self._l.maximo)
+    pageSize = property(lambda self: self._l.por_pagina)
+
+    @property
+    def position(self):
+        return self._l.pos
+
+    @position.setter
+    def position(self, v):
+        self._l.pos = min(max(0, v), self._l.maximo)
+
+
+class _Usr:
+    def __init__(self, lista):
+        self._l = lista
+        visiveis = lista.linhas[lista.pos:lista.pos + lista.por_pagina]
+        self.Children = types.SimpleNamespace(Count=len(visiveis),
+                                              ElementAt=lambda i: types.SimpleNamespace(Text=visiveis[i]))
+
+    @property
+    def verticalScrollbar(self):
+        if not self._l.com_barra:
+            raise Exception("sem barra de rolagem")
+        return _Barra(self._l)
+
+
+def saida_f13(n_grupos):
+    """Imita a lista do SAP: cabeçalho e, por grupo, 2 linhas de documento e 1 de total (números fictícios)."""
+    linhas = ["Compensação automática", "Exec.efet.  Lista detalhada de itens em aberto e compensados",
+              "Empresa", "BR21", "Nº conta", "28200202", "Nº doc.", "DocCompens"]
+    for g in range(n_grupos):
+        doc, comp = str(1399000101 + g), str(900000001 + g)
+        linhas += [doc, "001", "15.10.2026", comp, "BRL", "15.000,00-", "09001", f"202610{g + 1:02d}",
+                   doc, "002", "15.10.2026", comp, "BRL", "15.000,00", "09001", f"202610{g + 1:02d}",
+                   "*", "15.10.2026", comp, "BRL", "0,00"]
+    return linhas, [str(1399000101 + g) for g in range(n_grupos)], [str(900000001 + g) for g in range(n_grupos)]
+
+
+@mock.patch("fundo_fixo.time.sleep", lambda *_: None)
+class ListaDeSaida(unittest.TestCase):
+    """Caso visto no SAP em 15/10/2026: 8 docs de compensação, a primeira página mostrava só 5."""
+
+    def sessao(self, lista):
+        return types.SimpleNamespace(findById=lambda id_: _Usr(lista))
+
+    def test_le_todas_as_paginas(self):
+        linhas, docs, comps = saida_f13(8)
+        lista = _ListaFalsa(linhas, por_pagina=8 + 5 * 21)  # cabeçalho + 5 grupos, como no SAP
+        texto = fundo_fixo.textos_da_lista(self.sessao(lista))
+        self.assertEqual(fundo_fixo.docs_compensacao(texto, docs), comps)
+
+    def test_paginas_pequenas(self):
+        linhas, docs, comps = saida_f13(20)
+        texto = fundo_fixo.textos_da_lista(self.sessao(_ListaFalsa(linhas, por_pagina=7)))
+        self.assertEqual(fundo_fixo.docs_compensacao(texto, docs), comps)
+
+    def test_sem_barra_le_a_tela_que_houver(self):
+        linhas, docs, comps = saida_f13(8)
+        texto = fundo_fixo.textos_da_lista(self.sessao(_ListaFalsa(linhas, 8 + 5 * 21, com_barra=False)))
+        self.assertEqual(fundo_fixo.docs_compensacao(texto, docs), comps[:5])
+
+
 @mock.patch("fundo_fixo.time.sleep", lambda *_: None)
 class CompensacaoEfetivaFalsa(unittest.TestCase):
     """Roda executar_compensacao com SAP falso e confere o que vai para o histórico."""

@@ -268,15 +268,37 @@ def barra(s):
     return sb.MessageType, sb.Text
 
 
+def _textos_da_tela(s):
+    usr = s.findById("wnd[0]/usr")
+    out = []
+    for i in range(usr.Children.Count):
+        t = (getattr(usr.Children.ElementAt(i), "Text", "") or "").strip()
+        if t:
+            out.append(t)
+    return out
+
+
 def textos_da_lista(s):
-    """Texto da lista de saída da F.13 (usado no log e para achar o doc. de compensação)."""
+    """Texto da lista de saída da F.13 inteira (usado no log e para achar os docs de compensação).
+
+    A lista pode passar de uma tela: no SAP real (15/10/2026) só a primeira página foi lida e
+    2 de 8 docs de compensação ficaram de fora. Por isso ela é lida página a página pela barra
+    de rolagem. Se a rolagem falhar, fica o que já foi lido e o aviso de conferência cobre o resto."""
     out = []
     try:
-        usr = s.findById("wnd[0]/usr")
-        for i in range(usr.Children.Count):
-            t = (getattr(usr.Children.ElementAt(i), "Text", "") or "").strip()
-            if t:
-                out.append(t)
+        out += _textos_da_tela(s)
+        barra = s.findById("wnd[0]/usr").verticalScrollbar
+        maximo, passo, pos = int(barra.maximum), max(1, int(barra.pageSize)), int(barra.position)
+        for _ in range(1000):
+            if pos >= maximo:
+                break
+            s.findById("wnd[0]/usr").verticalScrollbar.position = min(pos + passo, maximo)
+            time.sleep(0.2)
+            novo = int(s.findById("wnd[0]/usr").verticalScrollbar.position)
+            if novo <= pos:
+                break
+            pos = novo
+            out += _textos_da_tela(s)
     except Exception:
         pass
     return " | ".join(out)
@@ -291,7 +313,7 @@ def docs_compensacao(texto, docs_entrada):
         if n2 in entrada or n2 == CONTA.lstrip("0") or n2 in achados:
             continue
         achados.append(n2)
-    return achados
+    return sorted(achados, key=int)
 
 
 TABELA_SELECAO = ("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010"
@@ -425,7 +447,7 @@ def f13_loja(s, docs, teste):
         return "erro", txt, []
     saida = textos_da_lista(s)
     comp = [] if teste else docs_compensacao(txt + " " + saida, docs)
-    return "ok", ((txt + " | ") if txt else "") + saida[:2000], comp
+    return "ok", ((txt + " | ") if txt else "") + saida[:8000], comp
 
 
 def registrar_historico(atrib, docs, status, comp, msg):

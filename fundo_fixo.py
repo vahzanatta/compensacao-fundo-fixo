@@ -286,44 +286,52 @@ def _rolar(s, pos):
     time.sleep(0.2)
 
 
-def digitar_documentos(s, docs):
+def _posicao(s):
+    return int(s.findById(TABELA_SELECAO).verticalScrollbar.position)
+
+
+def _ir_para(s, alvo):
+    """Rola a seleção até a linha `alvo` (contando do início) ficar visível e devolve o índice dela na tela.
+
+    O SAP pode parar a rolagem antes do pedido (com 8 documentos, a posição 8 vira 7), então a posição
+    real é sempre relida. Se a linha não ficar visível nem depois de um Enter, para com erro."""
     vis = _linhas_visiveis(s)
-    pos = 0
+    for tentativa in range(3):
+        pos = _posicao(s)
+        if pos <= alvo < pos + vis:
+            return alvo - pos
+        try:
+            _rolar(s, max(0, alvo - vis + 1))  # deixa o alvo na última linha visível
+        except Exception:
+            pass
+        pos = _posicao(s)
+        if pos <= alvo < pos + vis:
+            return alvo - pos
+        s.findById("wnd[1]").sendVKey(0)  # Enter: o SAP grava as linhas digitadas e libera mais rolagem
+        time.sleep(0.3)
+    raise RuntimeError(f"não consegui chegar à linha {alvo + 1} da seleção múltipla; nada foi executado")
+
+
+def digitar_documentos(s, docs):
     for i, doc in enumerate(docs):
-        if i - pos >= vis:
-            pos = i
-            _rolar(s, pos)
-        s.findById(CELULA.format(i - pos)).text = doc
+        s.findById(CELULA.format(_ir_para(s, i))).text = doc
     s.findById("wnd[1]").sendVKey(0)
     time.sleep(0.3)
 
 
 def ler_selecao(s):
-    vis = _linhas_visiveis(s)
     _rolar(s, 0)
-    lidos, pos = [], 0
-    while True:
-        vazio = False
-        for r in range(vis):
-            try:
-                v = s.findById(CELULA.format(r)).text.strip()
-            except Exception:
-                v = ""
-            if not v:
-                vazio = True
-                break
-            lidos.append(v.lstrip("0"))
-        if vazio:
-            break
-        pos += vis
+    lidos = []
+    while len(lidos) < 5000:
         try:
-            _rolar(s, pos)
-            if s.findById(TABELA_SELECAO).verticalScrollbar.position != pos:
-                break
+            v = s.findById(CELULA.format(_ir_para(s, len(lidos)))).text.strip()
+        except RuntimeError:
+            raise
         except Exception:
+            v = ""
+        if not v:
             break
-        if pos > 5000:
-            break
+        lidos.append(v.lstrip("0"))
     _rolar(s, 0)
     return lidos
 

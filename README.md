@@ -88,7 +88,7 @@ relatorio_fbl3h.vbs    script do SAP GUI que exporta a FBL3H
 Fundo Fixo.vbs         atalho que abre o aplicativo sem terminal
 docs/                  fluxo e demonstração
 exemplos/              exportação fictícia para testes (gerar_ficticio.py recria)
-tests/                 testes das regras de negócio, sem SAP
+tests/                 testes das regras de negócio e da seleção múltipla, sem SAP
 ```
 
 Para rodar os testes: `py -m unittest discover -s tests -v`.
@@ -96,7 +96,7 @@ Para rodar os testes: `py -m unittest discover -s tests -v`.
 ## Pontos ainda a validar
 
 - O número do documento de compensação é lido da tela de saída da F.13; confirmar na primeira compensação real.
-- Rolagem da seleção múltipla com mais de 8 documentos por loja ainda não foi testada no SAP.
+- Seleção múltipla com mais de 8 documentos por loja: o erro "esperados 10, lidos 9" foi corrigido e testado sem SAP; falta validar no SAP em modo teste.
 - O exercício usado na F.13 é o ano corrente (em janeiro, documentos lançados em dezembro não seriam selecionados).
 - Lançamentos retroativos com data DOC do mês anterior ficam fora do corte do mês.
 

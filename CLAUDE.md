@@ -81,7 +81,7 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 
 ## Pendências e pontos de atenção
 - Validar a primeira compensação efetiva pelo aplicativo, com 2 ou 3 lojas. Conferir se o doc. de compensação capturado (heurística na tela de saída da F.13, função `docs_compensacao`) bate com o SAP.
-- A rolagem da seleção múltipla com mais de 8 documentos ainda não foi testada no SAP.
+- Seleção múltipla com mais de 8 documentos: no SAP real, com 10 documentos, a conferência acusou "esperados 10, lidos 9" (faltava o 8º). Causa: pedir a posição 8 da rolagem parava na 7 e o 9º era escrito por cima do 8º. Corrigido em `_ir_para` (relê a posição real; se não alcançar, aperta Enter; se ainda assim não alcançar, para com erro) e coberto por `tests/test_selecao_multipla.py` com uma tabela falsa. **Falta validar no SAP**, em modo teste, numa loja com mais de 8 documentos.
 - O exercício da F.13 é fixo no ano corrente: em janeiro, documentos lançados em dezembro não seriam selecionados.
 - Na virada do mês, lançamentos retroativos com data DOC do mês anterior ficam fora do corte.
 - Próximo passo proposto (não implementado):
@@ -91,7 +91,7 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 - Fora de escopo: outras contas, correção das partidas antigas sem par (plano de ação até 30/10), ajustes de valor do fundo, integração via RFC.
 
 ## Como testar sem SAP
-- `py -m unittest discover -s tests -v` roda os testes das regras de negócio (`tests/test_regras.py`). Só usa a biblioteca padrão; rode antes de todo commit. Toda mudança de regra ganha ou ajusta um teste.
+- `py -m unittest discover -s tests -v` roda os testes das regras de negócio (`tests/test_regras.py`) e da seleção múltipla com uma tabela SAP falsa (`tests/test_selecao_multipla.py`). Só usa a biblioteca padrão; rode antes de todo commit. Toda mudança de regra ganha ou ajusta um teste.
 - `exemplos/fbl3h_ficticio.txt` tem 13 lojas fictícias (09101 a 09113), uma em cada situação. `exemplos/gerar_ficticio.py` recria o arquivo.
 - `py analisar.py exemplos/fbl3h_ficticio.txt --mes 2026-10 --demo` gera a página estática de demonstração.
 - Para testar o app sem SAP, substitua `rodar_relatorio`, `sessao_sap` e `f13_loja` por versões falsas e rode `app()`.

@@ -1,7 +1,8 @@
 ' Extrai a FBL3H (partidas em aberto) da conta do fundo fixo e salva em TXT.
 ' Argumentos (passados pelo fundo_fixo.py): pasta, empresa, conta, nome do arquivo.
 Dim pasta, empresa, conta, arquivo
-pasta = "Z:\15. MELHORIAS\FUNDO FIXO\temp"
+' ChrW(227) = a com til; assim o caminho nao depende da codificacao do arquivo
+pasta = "\\brsvp0000009\Groups\dfg\Financeiro\Tesouraria\25 Gest" & ChrW(227) & "o de Caixa\15. MELHORIAS\FUNDO FIXO"
 empresa = "BR21"
 conta = "28200202"
 arquivo = "fundo_fixo.txt"

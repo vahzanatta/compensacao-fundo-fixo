@@ -14,7 +14,7 @@ Veja o diagrama do processo em [`docs/fluxo.html`](docs/fluxo.html).
 - Windows, com **SAP GUI** aberto e logado e **scripting habilitado** (SAP Logon > Opções > Acessibilidade e scripting).
 - **Python 3.8+** (o comando `py` precisa funcionar no Prompt de Comando).
 - Pacotes: `pywin32` e `pywebview` (`requirements.txt`).
-- Acesso à pasta onde o relatório é salvo (padrão: `Z:\15. MELHORIAS\FUNDO FIXO\temp`).
+- Acesso à pasta onde o relatório é salvo (padrão: `\\brsvp0000009\Groups\dfg\Financeiro\Tesouraria\25 Gestão de Caixa\15. MELHORIAS\FUNDO FIXO`).
 
 ## Instalação
 
@@ -88,7 +88,10 @@ relatorio_fbl3h.vbs    script do SAP GUI que exporta a FBL3H
 Fundo Fixo.vbs         atalho que abre o aplicativo sem terminal
 docs/                  fluxo e demonstração
 exemplos/              exportação fictícia para testes (gerar_ficticio.py recria)
+tests/                 testes das regras de negócio, sem SAP
 ```
+
+Para rodar os testes: `py -m unittest discover -s tests -v`.
 
 ## Pontos ainda a validar
 

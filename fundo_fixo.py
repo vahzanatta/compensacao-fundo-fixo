@@ -39,7 +39,8 @@ import configparser
 _cfg = configparser.ConfigParser()
 _cfg.read(PASTA / "config.ini", encoding="utf-8")
 _c = _cfg["fundo_fixo"] if _cfg.has_section("fundo_fixo") else {}
-PASTA_RELATORIO = Path(_c.get("pasta_relatorio", r"Z:\15. MELHORIAS\FUNDO FIXO\temp"))
+PASTA_RELATORIO = Path(_c.get("pasta_relatorio",
+    r"\\brsvp0000009\Groups\dfg\Financeiro\Tesouraria\25 Gestão de Caixa\15. MELHORIAS\FUNDO FIXO"))
 ARQ_RELATORIO = PASTA_RELATORIO / "fundo_fixo.txt"
 ARQ_LISTA = PASTA_RELATORIO / "a_compensar.csv"
 ARQ_HISTORICO = PASTA_RELATORIO / "historico_compensacoes.csv"

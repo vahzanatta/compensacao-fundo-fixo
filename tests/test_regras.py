@@ -44,6 +44,20 @@ def por_loja(lojas):
     return {l["atrib"]: l for l in lojas}
 
 
+def escrever_fbl3h(partidas, pasta):
+    """Grava uma FBL3H falsa (mesmo layout da exportação) e devolve o caminho."""
+    cab = ["Empresa", "Data do documento", "Data de lançamento", "Nº documento", "Tipo de documento",
+           "Valor em moeda da empresa", "Chave de lançamento", "Atribuição", "Texto"]
+    linhas = ["\t".join(cab)]
+    for p in partidas:
+        linhas.append("\t".join(["BR21", f"{p['data_doc']:%d.%m.%Y}", f"{p['data_lanc']:%d.%m.%Y}",
+                                 p["doc"], p["tipo"], analisar.brl(p["valor"]), p["chave"],
+                                 p["atrib"], ""]))
+    caminho = pasta / "fbl3h.txt"
+    caminho.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    return caminho
+
+
 class ExemploFicticio(unittest.TestCase):
     """Cada loja fictícia (09101 a 09113) representa uma situação; o status não pode mudar sem querer."""
 
@@ -185,19 +199,9 @@ class RevalidacaoAntesDaF13(unittest.TestCase):
     """Regra 11: o lote é conferido com a FBL3H extraída de novo antes de executar."""
 
     def relatorio(self, partidas, fundos=True):
-        partidas = com_fundos(partidas) if fundos else partidas
-        cab =["Empresa", "Data do documento", "Data de lançamento", "Nº documento", "Tipo de documento",
-               "Valor em moeda da empresa", "Chave de lançamento", "Atribuição", "Texto"]
-        linhas = ["\t".join(cab)]
-        for p in partidas:
-            linhas.append("\t".join(["BR21", f"{p['data_doc']:%d.%m.%Y}", f"{p['data_lanc']:%d.%m.%Y}",
-                                     p["doc"], p["tipo"], analisar.brl(p["valor"]), p["chave"],
-                                     p["atrib"], ""]))
         pasta = tempfile.TemporaryDirectory()
         self.addCleanup(pasta.cleanup)
-        caminho = Path(pasta.name) / "fbl3h.txt"
-        caminho.write_text("\n".join(linhas) + "\n", encoding="utf-8")
-        return caminho
+        return escrever_fbl3h(com_fundos(partidas) if fundos else partidas, Path(pasta.name))
 
     def test_lote_valido_passa(self):
         txt = self.relatorio(par("09001", "100") + par("09002", "200"))

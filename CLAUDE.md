@@ -64,6 +64,7 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 - `modelo_revisao.html` é a tela. Os dados entram no lugar de `/*__DADOS__*/null`. Tem busca, filtros, tema claro e escuro, botões Montar lote, Testar lote e Compensar lote, progresso por loja e Histórico.
 - O nome que usamos é **lote de compensação**. O arquivo continua se chamando `a_compensar.csv`.
 - F.13: uma execução por loja, porque a OB74 não tem critérios para a conta e, sem eles, a F.13 junta tudo num grupo só.
+- Dentro de cada loja, a F.13 gera **um doc. de compensação por data de lançamento** (visto em 15/10/2026: 10 documentos com 8 datas de lançamento geraram 8 docs de compensação). Logo, o nº esperado de docs de compensação por loja = nº de datas de lançamento distintas dos documentos dela no lote.
 - IDs do SAP GUI vindos das minhas gravações:
   - campos da F.13: `chkX_SAKNR`, `ctxtBUKRX-LOW`, `txtGJAHX-LOW`, `ctxtKONTS-LOW`, `chkX_TESTL`;
   - botão da seleção múltipla: `btn%_DOCNR_%_APP_%-VALU_PUSH`;
@@ -78,10 +79,11 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 - Extração da FBL3H pelo VBS.
 - F.13 em teste e uma compensação efetiva manual da loja 04018 (feita por mim, pela F.13).
 - Digitação na seleção múltipla com até 7 documentos por loja, em modo teste.
+- Primeira compensação efetiva pelo aplicativo (Montar lote e Compensar lote), em 15/10/2026, incluindo uma loja com 10 documentos depois da correção da rolagem (`_ir_para`): a compensação no SAP saiu certa.
 
 ## Pendências e pontos de atenção
-- Validar a primeira compensação efetiva pelo aplicativo, com 2 ou 3 lojas. Conferir se o doc. de compensação capturado (heurística na tela de saída da F.13, função `docs_compensacao`) bate com o SAP.
-- Seleção múltipla com mais de 8 documentos: no SAP real, com 10 documentos, a conferência acusou "esperados 10, lidos 9" (faltava o 8º). Causa: pedir a posição 8 da rolagem parava na 7 e o 9º era escrito por cima do 8º. Corrigido em `_ir_para` (relê a posição real; se não alcançar, aperta Enter; se ainda assim não alcançar, para com erro) e coberto por `tests/test_selecao_multipla.py` com uma tabela falsa. **Falta validar no SAP**, em modo teste, numa loja com mais de 8 documentos.
+- Doc. de compensação incompleto: na primeira compensação efetiva pelo app (15/10/2026), uma loja com 10 documentos e 8 datas de lançamento gerou 8 docs de compensação, e o app gravou só 6. A captura é uma heurística (`textos_da_lista` lê só o que está visível na tela de saída da F.13; `docs_compensacao` procura números de 9 a 10 dígitos). Suspeita: os 2 que faltaram estavam abaixo da parte visível da lista. Para confirmar, precisa do `mensagem_sap` dessa loja no `logs/f13_efetiva_*.csv`. Enquanto a captura não é corrigida, o app compara com o esperado (`docs_comp_esperados`) e, quando não bate, mantém o status "ok" e grava no início do `mensagem_sap` do histórico "Conferir doc. de compensação no SAP: X de Y…"; a tela mostra isso em amarelo.
+- Seleção múltipla com mais de 8 documentos: no SAP real, com 10 documentos, a conferência acusou "esperados 10, lidos 9" (faltava o 8º). Causa: pedir a posição 8 da rolagem parava na 7 e o 9º era escrito por cima do 8º. Corrigido em `_ir_para` (relê a posição real; se não alcançar, aperta Enter; se ainda assim não alcançar, para com erro) e coberto por `tests/test_selecao_multipla.py` com uma tabela falsa. Validado no SAP com 10 documentos. Ainda não testado com mais de 16 (mais de uma rolagem).
 - O exercício da F.13 é fixo no ano corrente: em janeiro, documentos lançados em dezembro não seriam selecionados.
 - Na virada do mês, lançamentos retroativos com data DOC do mês anterior ficam fora do corte.
 - Próximo passo proposto (não implementado):

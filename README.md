@@ -74,7 +74,7 @@ py analisar.py exportacao.txt --mes 2026-10   # só a análise, gera a página e
 |---|---|---|
 | `fundo_fixo.txt` | pasta do relatório | Extração da FBL3H |
 | `a_compensar.csv` | pasta do relatório | Lote de compensação (loja; documento; data DOC; valor) |
-| `historico_compensacoes.csv` | pasta do relatório | Uma linha por compensação efetiva, com o doc. de compensação |
+| `historico_compensacoes.csv` | pasta do relatório | Uma linha por compensação efetiva, com o doc. de compensação. A F.13 gera um por data de lançamento; se o app não achar todos, a linha começa com "Conferir doc. de compensação no SAP" |
 | `logs/app.log` | pasta do aplicativo | Registro de tudo o que aconteceu |
 | `logs/f13_*.csv` | pasta do aplicativo | Log de cada execução (teste ou efetiva) |
 
@@ -96,7 +96,7 @@ Para rodar os testes: `py -m unittest discover -s tests -v`.
 ## Pontos ainda a validar
 
 - O número do documento de compensação é lido da tela de saída da F.13; confirmar na primeira compensação real.
-- Seleção múltipla com mais de 8 documentos por loja: o erro "esperados 10, lidos 9" foi corrigido e testado sem SAP; falta validar no SAP em modo teste.
+- Seleção múltipla com mais de 8 documentos por loja: corrigida e validada no SAP com 10 documentos; ainda não testada com mais de 16.
 - O exercício usado na F.13 é o ano corrente (em janeiro, documentos lançados em dezembro não seriam selecionados).
 - Lançamentos retroativos com data DOC do mês anterior ficam fora do corte do mês.
 

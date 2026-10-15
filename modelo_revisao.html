@@ -221,6 +221,8 @@ dialog::backdrop{background:var(--scrim)}
 .hist .comp b{font-family:var(--f-mono);font-weight:500}
 .hist .docs-h{grid-column:1/-1;font-family:var(--f-mono);font-size:.76rem;color:var(--muted);overflow-wrap:anywhere}
 .hist .msg{grid-column:1/-1;font-size:.84rem;color:var(--crit);overflow-wrap:anywhere}
+.hist li.av{background:var(--warn-bg)}
+.hist .av-t,.res .av-t{grid-column:1/-1;font-size:.84rem;color:var(--warn);overflow-wrap:anywhere}
 .h-arq{margin:0;font-size:.76rem;color:var(--muted);overflow-wrap:anywhere}
 @media (min-width:720px){.sap-acts{flex-direction:row}.sap-acts .btn{width:auto;flex:1}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -303,7 +305,7 @@ dialog::backdrop{background:var(--scrim)}
     <h2 id="hist-t">Histórico de compensações</h2>
     <div class="h-ctrl">
       <label class="search"><span class="sr">Buscar no histórico</span><input id="h-busca" type="search" inputmode="numeric" placeholder="Loja ou documento" autocomplete="off"></label>
-      <label class="h-chk"><input type="checkbox" id="h-erros"> Só erros</label>
+      <label class="h-chk"><input type="checkbox" id="h-erros"> Só erros e avisos</label>
     </div>
     <p class="h-resumo" id="h-resumo" role="status">Carregando...</p>
     <ul class="hist" id="h-lista"></ul>
@@ -577,11 +579,12 @@ async function acompanhar(){
     const info = l.status === "ok"
       ? (efetivo ? (l.doc_comp && l.doc_comp.length ? `Doc. compensação <span class="comp">${l.doc_comp.join(", ")}</span>` : "Compensada (número não identificado na saída)") : "Teste ok")
       : l.status === "erro" ? esc(l.msg || "Erro") : plural(l.docs.length,"documento","documentos");
-    return `<li><span class="loja">${esc(l.loja)}</span><span class="info">${info}</span><span class="st ${l.status}">${l.status==="pendente"?"Na fila":l.status==="ok"?"Ok":"Erro"}</span></li>`;
+    return `<li><span class="loja">${esc(l.loja)}</span><span class="info">${info}</span><span class="st ${l.status}">${l.status==="pendente"?"Na fila":l.status==="ok"?"Ok":"Erro"}</span>${l.aviso?`<span class="av-t">${esc(l.aviso)}</span>`:""}</li>`;
   }).join("");
   if(job.ativo){ setTimeout(acompanhar, 1000); return; }
   const erros = (job.lojas||[]).filter(l=>l.status==="erro").length;
-  const bom = !job.erro && !erros && !/continuam em aberto/.test(job.mensagem||"");
+  const avisos = (job.lojas||[]).filter(l=>l.aviso).length;
+  const bom = !job.erro && !erros && !avisos && !/continuam em aberto/.test(job.mensagem||"");
   $("prog-msg").className = "prog-msg " + (bom ? "good" : "bad");
   if(erros && !job.erro) $("prog-msg").textContent = (job.mensagem||"") + ` ${plural(erros,"loja com erro","lojas com erro")}.`;
   $("fechar").disabled = false;
@@ -603,17 +606,18 @@ $("btn-recarregar").addEventListener("click", () => { try{ localStorage.removeIt
 let HIST = [];
 function renderHist(){
   const q = $("h-busca").value.replace(/\D/g,"").replace(/^0+/,""), soErros = $("h-erros").checked;
-  const vis = HIST.filter(r => (!soErros || r.status !== "ok") &&
+  const aConferir = r => r.status === "ok" && /^Conferir doc\. de compensação/.test(r.mensagem_sap||"");
+  const vis = HIST.filter(r => (!soErros || r.status !== "ok" || aConferir(r)) &&
     (!q || [r.loja, r.documentos, r.doc_compensacao].some(v => (v||"").replace(/(^|\s)0+/g,"$1").includes(q))));
-  const erros = HIST.filter(r=>r.status!=="ok").length;
+  const erros = HIST.filter(r=>r.status!=="ok").length, avisos = HIST.filter(aConferir).length;
   $("h-resumo").textContent = HIST.length
-    ? `${plural(HIST.length,"compensação registrada","compensações registradas")}${erros?`, ${plural(erros,"com erro","com erro")}`:""}. Mostrando ${vis.length}.`
+    ? `${plural(HIST.length,"compensação registrada","compensações registradas")}${erros?`, ${plural(erros,"com erro","com erro")}`:""}${avisos?`, ${avisos} a conferir no SAP`:""}. Mostrando ${vis.length}.`
     : "Nenhuma compensação registrada ainda.";
   $("h-lista").innerHTML = vis.map(r => {
-    const ok = r.status === "ok", n = (r.documentos||"").split(" ").filter(Boolean).length;
-    return `<li class="${ok?"":"erro"}"><span class="loja">${esc(r.loja)}</span><span class="quando">${esc(r.data_hora)}</span><span class="st ${ok?"ok":"erro"} pill ${ok?"ok":"erro"}">${ok?"Ok":"Erro"}</span>
+    const ok = r.status === "ok", av = aConferir(r), n = (r.documentos||"").split(" ").filter(Boolean).length;
+    return `<li class="${ok?(av?"av":""):"erro"}"><span class="loja">${esc(r.loja)}</span><span class="quando">${esc(r.data_hora)}</span><span class="st ${ok?"ok":"erro"} pill ${ok?"ok":"erro"}">${ok?"Ok":"Erro"}</span>
       <span class="comp">${[ok ? (r.doc_compensacao ? `Doc. compensação <b>${esc(r.doc_compensacao)}</b>` : "Doc. compensação não identificado") : "", plural(n,"documento","documentos")].filter(Boolean).join(" · ")}</span>
-      <span class="docs-h">${esc(r.documentos)}</span>${ok?"":`<span class="msg">${esc(r.mensagem_sap)}</span>`}</li>`;
+      <span class="docs-h">${esc(r.documentos)}</span>${ok?(av?`<span class="av-t">${esc(r.mensagem_sap.split(" | ")[0])}</span>`:""):`<span class="msg">${esc(r.mensagem_sap)}</span>`}</li>`;
   }).join("");
 }
 async function abrirHist(){

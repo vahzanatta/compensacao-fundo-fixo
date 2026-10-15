@@ -226,6 +226,20 @@ def validar_com_relatorio(lojas, txt):
     return problemas
 
 
+def docs_comp_esperados(abertas, atrib, docs):
+    """Quantos docs de compensação a F.13 deve gerar: um por data de lançamento dentro da loja
+    (visto no SAP em 15/10/2026: 10 documentos com 8 datas de lançamento geraram 8)."""
+    return len({p["data_lanc"] for d in docs for p in abertas.get((atrib, d), [])})
+
+
+def aviso_doc_comp(comp, esperado):
+    """Texto de aviso quando a saída da F.13 não mostrou todos os docs de compensação esperados."""
+    if len(comp) == esperado:
+        return ""
+    return (f"Conferir doc. de compensação no SAP: {len(comp)} de {esperado} identificados na saída da F.13 "
+            f"(a F.13 gera um por data de lançamento).")
+
+
 def ainda_abertos(lojas, txt):
     abertas = partidas_abertas(txt)
     return [f"{atrib} {d}" for atrib, docs in lojas.items() for d in docs if (atrib, d) in abertas]
@@ -440,6 +454,8 @@ def executar_compensacao(efetivo, por_documento=False, progresso=None):
         if problemas:
             raise Falha("O lote não bate com a FBL3H atual. Nada foi executado: " + "; ".join(problemas[:10]))
         log("Lote conferido: cada documento tem 1 débito e 1 crédito BC, mesmo valor e mesma data DOC.")
+        abertas = partidas_abertas(txt)
+        a_conferir = 0
 
         execucoes = (OrderedDict((f"{a} {d}", [d]) for a, ds in lojas.items() for d in ds)
                      if por_documento else lojas)
@@ -462,14 +478,20 @@ def executar_compensacao(efetivo, por_documento=False, progresso=None):
                         fechar_janelas(s)
                     except Exception:
                         pass
+                aviso = ""
+                if efetivo and status == "ok":
+                    aviso = aviso_doc_comp(comp, docs_comp_esperados(abertas, rotulo.split()[0], docs))
+                    if aviso:
+                        a_conferir += 1
+                        msg = f"{aviso} | {msg}"
                 log(f"{rotulo}: {status}" + (f" | doc. compensação {' '.join(comp)}" if comp else "")
-                    + (f" | {msg[:200]}" if status != "ok" else ""))
+                    + (f" | {aviso}" if aviso else "") + (f" | {msg[:200]}" if status != "ok" else ""))
                 w.writerow([f"{dt.datetime.now():%d/%m/%Y %H:%M:%S}", modo, rotulo, " ".join(docs),
                             status, " ".join(comp), msg])
                 f.flush()
                 if efetivo:
                     registrar_historico(rotulo, docs, status, comp, msg)
-                r = {"loja": rotulo, "docs": docs, "status": status, "doc_comp": comp,
+                r = {"loja": rotulo, "docs": docs, "status": status, "doc_comp": comp, "aviso": aviso,
                      "msg": msg[:300] if status != "ok" else ""}
                 resultados.append(r)
                 if progresso:
@@ -490,6 +512,9 @@ def executar_compensacao(efetivo, por_documento=False, progresso=None):
                 conclusao = (f"{len(abertos)} documento(s) continuam em aberto: " + ", ".join(abertos[:10]))
             else:
                 conclusao = f"Tudo certo: os {n_docs} documentos saíram das partidas em aberto."
+            if a_conferir:
+                conclusao += (f" {a_conferir} loja(s) com doc. de compensação incompleto no histórico: "
+                              f"conferir no SAP.")
             log(conclusao)
         else:
             gerar_pagina(txt)

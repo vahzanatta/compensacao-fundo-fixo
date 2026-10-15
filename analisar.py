@@ -9,11 +9,13 @@ Gera:
     revisao_compensacao.html  -> página para o analista revisar e selecionar os documentos
     analise.json              -> mesmo resultado em formato de dados (para o script de compensação)
 
-Regras (reunião de 08/10/2026):
-  - Ignora a partida inicial (SE/AB) e tudo com data DOC anterior ao mês de referência.
+Regras (reunião de 08/10/2026, fundo revisto em 15/10/2026):
+  - O fundo de referência da loja é o documento mais antigo dela (data DOC), de qualquer tipo,
+    com saldo a débito. Nunca é compensado. Loja sem fundo é erro e fica inteira fora.
+  - Ignora tudo com data DOC anterior ao mês de referência.
   - No mês: só tipo BC entra na compensação. Cada nº de documento precisa ter
     exatamente um débito (40) e um crédito (50) que somam zero.
-  - Confere o valor do par com o fundo de referência da loja (partidas SE/AB).
+  - Confere o valor do par com o fundo de referência da loja.
   - Aponta duas datas DOC iguais na mesma loja e dias sem lançamento.
 """
 import argparse
@@ -108,6 +110,25 @@ def brl(v):
     return ("-" if v < 0 else "") + s
 
 
+def _ordem_doc(doc):
+    return (0, int(doc), "") if doc.isdigit() else (1, 0, doc)
+
+
+def referencia(itens):
+    """Fundo de referência da loja (regra 1): todas as linhas do documento mais antigo dela.
+
+    Mais antigo = menor data DOC; empate pela data de lançamento e depois pelo menor nº de documento.
+    Vale qualquer tipo (SE, AB, BC...). Devolve {"doc", "linhas", "saldo", "valido"}; só é fundo
+    válido se o saldo for a débito (> 0). Sem itens, devolve None."""
+    if not itens:
+        return None
+    primeira = min(itens, key=lambda p: (p["data_doc"], p["data_lanc"], _ordem_doc(p["doc"])))
+    linhas = [p for p in itens if p["doc"] == primeira["doc"]]
+    saldo = round(sum(p["valor"] for p in linhas), 2)
+    return {"doc": primeira["doc"], "data_doc": primeira["data_doc"], "linhas": linhas,
+            "saldo": saldo, "valido": saldo > 0}
+
+
 def analisar(partidas, inicio_mes):
     por_loja = defaultdict(list)
     for p in partidas:
@@ -121,13 +142,19 @@ def analisar(partidas, inicio_mes):
     lojas = []
     for atrib in sorted(por_loja):
         itens = por_loja[atrib]
-        ref = [p for p in itens if p["tipo"] in ("SE", "AB")]
-        fundo = round(sum(p["valor"] for p in ref), 2) if ref else None
-        mes = [p for p in itens if p["data_doc"] >= inicio_mes and p["tipo"] not in ("SE", "AB")]
+        info = referencia(itens)
+        # sem fundo válido, nada é tirado como referência: a loja inteira fica bloqueada
+        ref = info["linhas"] if info["valido"] else []
+        fundo = info["saldo"] if info["valido"] else None
+        mes = [p for p in itens if p["data_doc"] >= inicio_mes and p not in ref]
         antigas = [p for p in itens if p not in mes and p not in ref]
 
         erros, revisar, avisos = [], [], []
         docs = []
+        if not info["valido"]:
+            erros.append(f"Sem fundo de referência em aberto: o documento mais antigo ({info['doc']}, "
+                         f"{info['data_doc']:%d/%m/%Y}) tem saldo {brl(info['saldo'])}, e o fundo precisa "
+                         f"ser a débito. Nenhum documento desta loja entra no lote.")
 
         bc = defaultdict(list)
         for p in mes:
@@ -145,8 +172,8 @@ def analisar(partidas, inicio_mes):
             outras = sorted(lojas_do_doc[doc] - {atrib})
             # contrapartida só vale dentro da mesma loja (atribuição)
             par_na_loja = len(ps) == 2 and len(deb) == 1 and len(cre) == 1 and soma == 0 and mesma_data
-            ok = par_na_loja and not outras
-            if not ok:
+            ok = par_na_loja and not outras and info["valido"]
+            if not (par_na_loja and not outras):
                 if par_na_loja:
                     motivo = (f"par completo, mas o mesmo nº de documento tem lançamento na(s) loja(s) "
                               f"{', '.join(outras)}; a F.13 seleciona por número e incluiria esse lançamento. "
@@ -181,8 +208,6 @@ def analisar(partidas, inicio_mes):
         if fundo is not None and valores and any(v != fundo for v in valores):
             revisar.append(f"Fecha com {' e '.join(brl(v) for v in valores)}, mas o fundo de referência "
                            f"é {brl(fundo)}.")
-        if fundo is None and pares:
-            avisos.append("Sem partida inicial (SE/AB) para conferir o fundo.")
 
         por_dia = defaultdict(list)
         for d in pares:

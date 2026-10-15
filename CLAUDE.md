@@ -40,7 +40,7 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 - Uma macro anterior errava porque casava só pelo valor (pegava troco, vendas e depósitos que zeravam por coincidência).
 
 ## Regras de negócio (validadas comigo, não mudar sem confirmar)
-1. A partida inicial (tipo SE ou AB) é o fundo de referência da loja e nunca é compensada.
+1. O fundo de referência da loja é o documento mais antigo dela no relatório (menor data DOC; empate pela data de lançamento e depois pelo menor nº de documento), de qualquer tipo (SE, AB, BC ou outro). Todas as linhas desse documento na loja são a referência, e ela nunca é compensada. Só vale como fundo se o saldo for a débito (> 0). No ajuste de fundo, o antigo é estornado com um SE e um novo é lançado; enquanto o antigo estiver em aberto, ele segue como referência e o SE do mês leva a loja para "revisar". Toda loja tem que ter fundo (validado em 15/10/2026). A regra vive em `analisar.referencia`, usada pela análise e pela revalidação antes da F.13.
 2. Só entram partidas com data DOC a partir do dia 1º do mês corrente.
 3. Atribuição = código da loja. As partidas são agrupadas por loja.
 4. Um par é o mesmo nº de documento, na mesma loja: exatamente 1 débito e 1 crédito, tipo BC, que somam zero e têm a mesma data DOC.
@@ -49,7 +49,7 @@ O código fica todo na raiz, então o mapa por arquivo é este:
 7. Se o nº de um documento aparece também em outra loja, o par fica bloqueado, porque a F.13 seleciona por número e pegaria o outro lançamento.
 8. Nunca compensar um crédito de um documento com um débito de outro, nem de datas diferentes.
 9. Classificação das lojas:
-   - **erro**: documento sem par, com mais de 2 linhas, datas diferentes ou número em outra loja. O documento fica bloqueado.
+   - **erro**: documento sem par, com mais de 2 linhas, datas diferentes ou número em outra loja. O documento fica bloqueado. Loja sem fundo de referência válido também é erro, e aí a loja inteira fica bloqueada. (Loja sem nenhuma partida em aberto não aparece na FBL3H e não é detectada.)
    - **revisar**: lançamento não BC, pares com valores diferentes, valor diferente do fundo, dois fechamentos na mesma data DOC.
    - **pronta**: tudo certo; já vem marcada.
    - **sem movimento**: nada em aberto no mês.

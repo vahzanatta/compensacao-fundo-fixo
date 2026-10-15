@@ -14,7 +14,7 @@ Revise o que mudou (`git diff` e `git diff --staged`, mais arquivos novos em `gi
 
 ## 2. Travas de segurança (bloqueia o commit se alguma cair)
 Confira no diff que nenhuma destas foi removida ou enfraquecida sem confirmação explícita da Vah na conversa:
-- partida SE/AB nunca entra no lote;
+- o fundo de referência (documento mais antigo da loja, `analisar.referencia`) nunca entra no lote, e loja sem fundo fica inteira fora, tanto na análise quanto em `validar_com_relatorio`;
 - corte pela data DOC a partir do dia 1º do mês;
 - par = mesmo documento, mesma loja, 1 débito + 1 crédito, tipo BC, soma zero, mesma data DOC;
 - documento com o número em outra loja fica bloqueado;

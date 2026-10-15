@@ -183,7 +183,7 @@ code{font-family:var(--f-mono);font-size:.9em;background:var(--lane);padding:1px
       <h2 id="h-travas">Travas de segurança</h2>
       <ul>
         <li>Só entram documentos BC com 1 débito e 1 crédito do mesmo valor e da mesma data DOC, dentro da mesma atribuição (loja). Lançamento de outra loja nunca é contrapartida.</li>
-        <li>A partida inicial (SE/AB) e tudo antes do mês corrente ficam fora.</li>
+        <li>O fundo de referência (o documento mais antigo da loja, de qualquer tipo) e tudo antes do mês corrente ficam fora. Loja sem fundo fica inteira fora.</li>
         <li>O lote padrão só leva lojas prontas; editado, continua exigindo saldo 0,00.</li>
         <li>Nada é compensado sem dry run do lote final; antes da efetiva, a FBL3H é extraída de novo e cada documento é conferido outra vez.</li>
         <li>Na F.13, o aplicativo relê a seleção múltipla e só executa se for exatamente o lote da loja.</li>

@@ -192,13 +192,24 @@ def par_valido(linhas):
 
 
 def validar_com_relatorio(lojas, txt):
+    sys.path.insert(0, str(PASTA))
+    from analisar import referencia
     abertas = partidas_abertas(txt)
-    lojas_do_doc = {}
-    for (a, d) in abertas:
+    lojas_do_doc, itens_da_loja = {}, {}
+    for (a, d), linhas in abertas.items():
         lojas_do_doc.setdefault(d, set()).add(a)
+        itens_da_loja.setdefault(a, []).extend(linhas)
     problemas = []
     for atrib, docs in lojas.items():
+        # regra 1: o documento mais antigo da loja é o fundo e nunca é compensado; sem fundo, a loja fica fora
+        info = referencia(itens_da_loja.get(atrib, []))
+        if not info or not info["valido"]:
+            problemas.append(f"{atrib}: loja sem fundo de referência em aberto; nenhum documento dela pode entrar")
+            continue
         for d in docs:
+            if d == info["doc"]:
+                problemas.append(f"{atrib} {d}: é o fundo de referência da loja e nunca é compensado")
+                continue
             linhas = abertas.get((atrib, d))
             if not linhas:
                 problemas.append(f"{atrib} {d}: não está mais em aberto")

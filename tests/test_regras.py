@@ -29,6 +29,17 @@ def par(atrib, doc, valor=15000.0, dia=date(2026, 10, 2)):
     return [partida(atrib, doc, -valor, dia), partida(atrib, doc, valor, dia)]
 
 
+def abertura(atrib, valor=15000.0, tipo="SE", dia=date(2024, 3, 4)):
+    """Fundo de referência: o lançamento mais antigo da loja."""
+    return partida(atrib, "8000" + atrib, valor, dia, tipo)
+
+
+def com_fundos(partidas):
+    """Acrescenta a abertura de cada loja que aparece nas partidas (toda loja precisa ter fundo)."""
+    lojas = sorted({p["atrib"] for p in partidas})
+    return [abertura(a) for a in lojas] + partidas
+
+
 def por_loja(lojas):
     return {l["atrib"]: l for l in lojas}
 
@@ -67,7 +78,7 @@ class ExemploFicticio(unittest.TestCase):
 
 class RegrasDoPar(unittest.TestCase):
     def analisa(self, partidas):
-        return por_loja(analisar.analisar(partidas, OUTUBRO))
+        return por_loja(analisar.analisar(com_fundos(partidas), OUTUBRO))
 
     def test_par_correto(self):
         l = self.analisa(par("09001", "100"))["09001"]
@@ -94,12 +105,59 @@ class RegrasDoPar(unittest.TestCase):
         self.assertEqual(self.analisa(ps)["09001"]["status"], "erro")
 
     def test_valor_diferente_do_fundo_manda_revisar(self):
-        ps = [partida("09001", "80001", 15000.0, date(2024, 3, 4), "SE")] + par("09001", "100", 12000.0)
+        ps = par("09001", "100", 12000.0)  # o fundo de com_fundos é 15.000,00
         self.assertEqual(self.analisa(ps)["09001"]["status"], "revisar")
 
     def test_dois_fechamentos_na_mesma_data_manda_revisar(self):
         ps = par("09001", "100") + par("09001", "101")
         self.assertEqual(self.analisa(ps)["09001"]["status"], "revisar")
+
+
+class FundoDeReferencia(unittest.TestCase):
+    """Regra 1: o fundo é o documento mais antigo da loja (data DOC), de qualquer tipo, com saldo a débito.
+    Nunca é compensado. Loja sem fundo é erro e fica inteira fora do lote."""
+
+    def analisa(self, partidas):
+        return por_loja(analisar.analisar(partidas, OUTUBRO))["09001"]
+
+    def test_fundo_de_qualquer_tipo(self):
+        for tipo in ("SE", "AB", "SA", "BC", "ZZ"):
+            with self.subTest(tipo=tipo):
+                l = self.analisa([abertura("09001", 15000.0, tipo)] + par("09001", "100"))
+                self.assertEqual(l["fundo"], 15000.0)
+                self.assertEqual(l["status"], "ok")
+                self.assertEqual([d["doc"] for d in l["docs"]], ["100"])
+
+    def test_fundo_lancado_no_mes_nao_entra_no_lote(self):
+        ps = [abertura("09001", 15000.0, "BC", date(2026, 10, 1))] + par("09001", "100")
+        l = self.analisa(ps)
+        self.assertEqual(l["status"], "ok")
+        self.assertNotIn("800009001", [d["doc"] for d in l["docs"]])
+
+    def test_se_que_nao_e_o_mais_antigo_vai_para_revisar(self):
+        ps = [abertura("09001"), partida("09001", "500", -15000.0, date(2026, 10, 3), "SE")] + par("09001", "100")
+        l = self.analisa(ps)
+        self.assertEqual(l["fundo"], 15000.0)
+        self.assertEqual(l["status"], "revisar")
+
+    def test_loja_sem_fundo_e_erro_e_fica_toda_fora(self):
+        l = self.analisa(par("09001", "100", dia=date(2026, 10, 1)) + par("09001", "101", dia=date(2026, 10, 2)))
+        self.assertEqual(l["status"], "erro")
+        self.assertTrue(any("fundo" in m for m in l["erros"]))
+        self.assertFalse([d for d in l["docs"] if d["ok"]])
+
+    def test_mais_antigo_a_credito_nao_e_fundo(self):
+        ps = [abertura("09001", -500.0)] + par("09001", "100")
+        l = self.analisa(ps)
+        self.assertEqual(l["status"], "erro")
+        self.assertFalse([d for d in l["docs"] if d["ok"]])
+
+    def test_desempate_pela_data_de_lancamento_e_pelo_numero(self):
+        a = dict(abertura("09001", 15000.0), doc="900", data_lanc=date(2024, 3, 6))
+        b = dict(abertura("09001", 12000.0), doc="901", data_lanc=date(2024, 3, 5))
+        self.assertEqual(self.analisa([a, b] + par("09001", "100", 12000.0))["fundo"], 12000.0)
+        c = dict(abertura("09001", 12000.0), doc="899", data_lanc=date(2024, 3, 6))
+        self.assertEqual(self.analisa([a, c] + par("09001", "100", 12000.0))["fundo"], 12000.0)
 
 
 class ParValidoDaCompensacao(unittest.TestCase):
@@ -126,8 +184,9 @@ class ParValidoDaCompensacao(unittest.TestCase):
 class RevalidacaoAntesDaF13(unittest.TestCase):
     """Regra 11: o lote é conferido com a FBL3H extraída de novo antes de executar."""
 
-    def relatorio(self, partidas):
-        cab = ["Empresa", "Data do documento", "Data de lançamento", "Nº documento", "Tipo de documento",
+    def relatorio(self, partidas, fundos=True):
+        partidas = com_fundos(partidas) if fundos else partidas
+        cab =["Empresa", "Data do documento", "Data de lançamento", "Nº documento", "Tipo de documento",
                "Valor em moeda da empresa", "Chave de lançamento", "Atribuição", "Texto"]
         linhas = ["\t".join(cab)]
         for p in partidas:
@@ -151,6 +210,17 @@ class RevalidacaoAntesDaF13(unittest.TestCase):
     def test_numero_em_outra_loja_falha(self):
         txt = self.relatorio(par("09001", "100") + [partida("09002", "100", 50.0)])
         self.assertTrue(fundo_fixo.validar_com_relatorio({"09001": ["100"]}, txt))
+
+    def test_fundo_de_referencia_no_lote_falha(self):  # regra 1, mesmo se o fundo for um "par" BC
+        fundo = par("09001", "90", dia=date(2024, 3, 4))
+        fundo[1]["valor"] = 30000.0  # débito maior: saldo a débito, vale como fundo
+        txt = self.relatorio(fundo + par("09001", "100"), fundos=False)
+        self.assertTrue(fundo_fixo.validar_com_relatorio({"09001": ["90", "100"]}, txt))
+
+    def test_loja_sem_fundo_falha(self):
+        txt = self.relatorio(par("09001", "100", dia=date(2026, 10, 1)) + par("09001", "101"), fundos=False)
+        problemas = fundo_fixo.validar_com_relatorio({"09001": ["101"]}, txt)
+        self.assertTrue(any("fundo" in p for p in problemas))
 
 
 class LoteVindoDaTela(unittest.TestCase):

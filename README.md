@@ -50,14 +50,14 @@ py analisar.py exportacao.txt --mes 2026-10   # só a análise, gera a página e
 ## Regras de negócio
 
 **Análise**
-- A partida inicial (tipo **SE** ou **AB**) é o fundo de referência da loja e nunca é compensada.
+- O **fundo de referência** da loja é o **documento mais antigo** dela no relatório (menor data DOC; empate pela data de lançamento e pelo menor nº), de **qualquer tipo** (SE, AB, BC...), com saldo a débito. Nunca é compensado. No ajuste de fundo, o antigo é estornado (SE) e um novo é lançado; enquanto o antigo estiver em aberto, ele continua sendo a referência.
 - Só entram partidas com **data DOC no mês corrente** em diante.
 - O par é definido pelo **nº do documento dentro da mesma loja (atribuição)**: exatamente **1 débito e 1 crédito**, que somam zero e têm a **mesma data DOC**. Lançamento de outra loja nunca é contrapartida.
 - Crédito = valor negativo (chave 50); débito = valor positivo (chave 40).
 - Só tipo **BC** entra; outros tipos vão para revisão.
 
 **Classificação das lojas**
-- **Erro**: documento sem par, com mais de 2 linhas ou com datas diferentes (fica bloqueado).
+- **Erro**: documento sem par, com mais de 2 linhas ou com datas diferentes (fica bloqueado). Loja **sem fundo de referência** (o mais antigo não é um débito) também é erro, e nenhum documento dela entra no lote.
 - **Revisar**: lançamento não BC, valores diferentes entre os pares, valor diferente do fundo de referência ou dois fechamentos na mesma data DOC.
 - **Pronta**: todos os pares válidos. **Sem movimento**: nada em aberto no mês.
 
